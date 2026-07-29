@@ -103,7 +103,7 @@ class MotionPlanner:
     @property
     def attachment_manager(self):
         """Attachment manager for attaching/detaching obstacles to robot links."""
-        return self.trajopt_solver.attachment_manager
+        return self.trajopt_solver.core.attachment_manager
 
     # -- Properties --
 
@@ -217,6 +217,7 @@ class MotionPlanner:
         Goalset is auto-detected from ``goal_tool_poses.num_goalset``.  When
         ``num_goalset > 1`` the planner uses a simpler IK+TrajOpt loop without
         graph seeding.
+
         """
         if current_state.ndim > 2:
             log_and_raise(f"current_state must be a 2D tensor, got shape: {current_state.shape}")

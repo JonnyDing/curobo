@@ -98,7 +98,7 @@ class BatchMotionPlanner:
     @property
     def attachment_manager(self):
         """Attachment manager for attaching/detaching obstacles to robot links."""
-        return self.trajopt_solver.attachment_manager
+        return self.trajopt_solver.core.attachment_manager
 
     @property
     def batch_size(self) -> int:
