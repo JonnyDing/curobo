@@ -291,6 +291,7 @@ class KinematicsParams:
     def clone(self) -> KinematicsParams:
         """Clone the kinematics tensor config."""
         return KinematicsParams(
+            device_cfg=self.device_cfg,
             fixed_transforms=self.fixed_transforms.clone(),
             link_map=self.link_map.clone(),
             joint_map=self.joint_map.clone(),
@@ -939,4 +940,3 @@ class KinematicsParams:
             urdf.write_xml_file(output_path)
 
         return urdf
-

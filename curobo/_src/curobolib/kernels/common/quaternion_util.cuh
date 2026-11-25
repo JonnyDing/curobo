@@ -94,10 +94,11 @@ namespace common {
       const float dqy = quat_grad[2];
       const float dqz = quat_grad[3];
 
-      // Compute the angular velocity gradient using the Jacobian transpose
-      omega.x = 0.5 * (-quat.x * dqw + quat.w * dqx + quat.z * dqy - quat.y * dqz);
-      omega.y = 0.5 * (-quat.y * dqw - quat.z * dqx + quat.w * dqy + quat.x * dqz);
-      omega.z = 0.5 * (-quat.z * dqw + quat.y * dqx - quat.x * dqy + quat.w * dqz);
+      // Joint axes are expressed in the world frame. A world-frame rotation
+      // left-multiplies q: dq = 0.5 * [0, omega] * q. Apply its transpose here.
+      omega.x = 0.5f * (-quat.x * dqw + quat.w * dqx - quat.z * dqy + quat.y * dqz);
+      omega.y = 0.5f * (-quat.y * dqw + quat.z * dqx + quat.w * dqy - quat.x * dqz);
+      omega.z = 0.5f * (-quat.z * dqw - quat.y * dqx + quat.x * dqy + quat.w * dqz);
 
     }
 

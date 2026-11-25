@@ -47,18 +47,26 @@ class CudaCoreKernelCache:
         self.device: Optional[any] = None
         self.arch: Optional[str] = None
 
-    def initialize(self):
-        """Initialize CUDA device and get architecture"""
-        if self.device is None:
+    def initialize(self, device_index: Optional[int] = None) -> None:
+        """Select the cache device before loading or launching CUDA modules."""
+        if device_index is None:
+            device_index = (
+                self.device.device_id if self.device is not None else torch.cuda.current_device()
+            )
+        if self.device is None or self.device.device_id != device_index:
             try:
                 from cuda.core import Device
 
-                self.device = Device()
+                # Modules belong to a CUDA context, even when GPUs have the
+                # same architecture. Never reuse a module on another device.
+                self.compiled_kernels.clear()
+                self.device = Device(device_index)
                 self.device.set_current()
                 self.arch = f"sm_{self.device.arch}"
-                log_info(f"cuda.core backend initialized: {self.arch}")
+                log_info(f"cuda.core backend initialized: cuda:{device_index} {self.arch}")
             except ImportError:
                 log_and_raise("cuda.core not available, cannot initialize CudaCoreKernelCache")
+        self.device.set_current()
 
     def get_stream_wrapper(self, torch_stream):
         """Create cuda.core compatible stream from PyTorch stream.
@@ -78,8 +86,11 @@ class CudaCoreKernelCache:
                 stream_id = self.pt_stream.cuda_stream
                 return (0, stream_id)
 
-        if self.device is None:
-            self.initialize()
+        # Robot loading and third-party libraries may change the current
+        # CUDA device. The tensor's PyTorch stream owns the authoritative
+        # context; using Device() here can otherwise launch on GPU 0 with
+        # pointers allocated on another GPU.
+        self.initialize(torch_stream.device.index)
 
         # This doesn't create a new stream, it just wraps the PyTorch stream in a cuda.core
         # Stream object

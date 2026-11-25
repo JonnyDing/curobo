@@ -82,6 +82,31 @@ def test_franka_kinematics(cfg):
         assert q_err < 1e-1
 
 
+def test_rotated_tool_gradient_matches_finite_difference(cfg: KinematicsCfg) -> None:
+    """Check orientation derivatives away from identity in float32."""
+    robot = Kinematics(cfg)
+    position = torch.tensor(
+        [[0.3, -1.2, 0.4, -2.0, -0.2, 1.0, 0.5]],
+        device="cuda:0", dtype=torch.float32, requires_grad=True,
+    )
+    weights = torch.arange(9, device=position.device, dtype=position.dtype).reshape(1, 3, 3) / 9
+
+    def loss(joints: torch.Tensor) -> torch.Tensor:
+        state = robot.compute_kinematics(JointState.from_position(joints, robot.joint_names))
+        rotation = state.tool_poses.get_link_pose("panda_hand").get_matrix()[..., :3, :3]
+        return (rotation * weights).sum()
+
+    gradient = torch.autograd.grad(loss(position), position)[0].clone()
+    differences = torch.empty_like(position)
+    step = 1e-3
+    for index in range(position.shape[-1]):
+        plus, minus = position.detach().clone(), position.detach().clone()
+        plus[..., index] += step
+        minus[..., index] -= step
+        differences[..., index] = (loss(plus) - loss(minus)) / (2 * step)
+    torch.testing.assert_close(gradient, differences, atol=2e-3, rtol=2e-3)
+
+
 def test_franka_attached_object_kinematics(cfg):
     device_cfg = DeviceCfg()
 
